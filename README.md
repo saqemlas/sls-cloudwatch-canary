@@ -11,16 +11,16 @@ Canaries offer programmatic access to a headless Google Chrome Browser. Canaries
 
 
 ## Notes
-Cloudwatch Synthetic Canaries still has some issues, deployment follows the following process...
+Cloudwatch Synthetic Canaries still has some issues...
 
-1. Zip & upload bundled synthetic canary code to s3 bucket (also zip & upload clean-function code)
-2. Deploy cloudformation stack (w/ synthetic canary & cleanup-stack) pointing to zip file in s3 buckets
+- canary cloudformation resource requires the s3 bucket with zip code file to be created before the stack is created. The ArtifactS3Location field checks the artifact is in location at deployment. Therefore deployment follows the following process...
 
-> removal of stack does NOT remove all resources ie function, layer, log, etc resources as they are AUTO-GENERATED hence their 'cwsyn-' prefix. *A custom cloudformation resource (infra/cleaup-stack.yml) and lambda function (infra/cleaup-stack/clean-function/index.py) have been created to remove resources.*
+    1. Zip & upload bundled synthetic canary code to s3 bucket (also zip & upload clean-function code)
+    2. Deploy cloudformation stack (w/ synthetic canary & cleanup-stack) pointing to zip file in s3 buckets
 
-> cloudwatch synthetic canary cloudformation resource requires the s3 bucket with zip code file to be created before the stack is created. The ArtifactS3Location field checks the artifact is in location at deployment.
+- removal of stack does NOT remove all resources ie function, layer, log, etc resources as they are AUTO-GENERATED hence their 'cwsyn-' prefix. *A custom cloudformation resource (infra/cleaup-stack.yml) and lambda function (infra/cleaup-stack/clean-function/index.py) have been created to remove resources.*
 
-> canary lambda function points to a zip file of the canary code in an s3 bucket, if the file name does not change with code changes, the function runtime will not update. hence using timestamp.js to version each deployment with a timestamp.
+- canary lambda function points to a zip file of the canary code in an s3 bucket, if the file name does not change with code changes, the function runtime will not update. hence using timestamp.js to version each deployment with a timestamp.
 
 
 ## Architecture
