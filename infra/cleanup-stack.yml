@@ -1,0 +1,84 @@
+Resources:
+
+  CleanCanaryStack:
+    DependsOn: CleanCanaryStackLambda
+    Type: AWS::CloudFormation::CustomResource
+    Properties: 
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:custom.baseName}-cleanup
+      CanaryName: ${self:custom.baseName}
+  
+  CleanCanaryStackLambdaLogGroup:
+    DependsOn: CleanCanaryStackLambda
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${CleanCanaryStackLambda}
+      RetentionInDays: 7
+
+  CleanCanaryStackLambda: 
+    DependsOn: CleanCanaryStackLambdaRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler 
+      FunctionName: ${self:custom.baseName}-cleanup 
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${self:custom.baseName}-cleanup-role
+      Runtime: python3.8
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        S3Bucket: ${self:custom.buckets.cleanup}
+        S3Key: cleanup-function.zip
+
+  CleanCanaryStackLambdaRole:
+    DependsOn: Canary
+    Type: AWS::IAM::Role
+    Properties: 
+      RoleName: ${self:custom.baseName}-cleanup-role
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: Allow 
+            Action: sts:AssumeRole
+            Principal: 
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: ${self:custom.baseName}-cleanup-policy
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 
+                  - !Sub arn:aws:logs:${self:provider.region}:${AWS::AccountId}:log-group:/aws/lambda/${self:custom.baseName}-cleanup:log-stream:*
+              - Effect: Allow 
+                Action: 
+                  - lambda:DeleteFunction
+                Resource: 
+                  - !Sub arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:function:cwsyn-${self:custom.baseName}-*
+              - Effect: Allow 
+                Action: 
+                  - lambda:DeleteLayerVersion
+                Resource: 
+                  - !Sub arn:aws:lambda:${self:provider.region}:${AWS::AccountId}:layer:cwsyn-${self:custom.baseName}-*
+              - Effect: Allow
+                Action:
+                  - cloudwatch:DeleteAlarms
+                Resource:
+                  - !Sub arn:aws:cloudwatch:${self:provider.region}:${AWS::AccountId}:alarm:Synthetics-Alarm-${self:custom.baseName}-*
+              - Effect: Allow 
+                Action:
+                  - logs:DeleteLogGroup
+                Resource:
+                  - !Sub arn:aws:logs:${self:provider.region}:${AWS::AccountId}:log-group:/aws/lambda/cwsyn-${self:custom.baseName}-*
+                  - !Sub arn:aws:logs:${self:provider.region}:${AWS::AccountId}:log-group:/aws/lambda/${self:custom.baseName}-cleanup:*
+              - Effect: Allow 
+                Action:
+                  - cloudwatch:DescribeAlarms
+                Resource: 
+                  - !Sub arn:aws:cloudwatch:${self:provider.region}:${AWS::AccountId}:alarm:*
+              - Effect: Allow 
+                Action: 
+                  - synthetics:Get*
+                Resource: 
+                  - !Sub arn:aws:synthetics:${self:provider.region}:${AWS::AccountId}:canary:${self:custom.baseName}

@@ -1,0 +1,55 @@
+service: canary
+
+variablesResolutionMode: 20210326
+
+plugins:
+  - serverless-s3-cleaner
+  - serverless-scriptable-plugin
+
+projectDir: ..
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!.serverless/**'
+
+custom:
+  project: template
+  baseName: ${self:custom.project}-${self:service}-${self:provider.stage}
+
+  buckets: 
+    version: ${file(./timestamp.js)} # force lambda to identify updated code
+    canary: ${self:custom.baseName}-bucket
+    cleanup: ${self:custom.baseName}-cleanup-bucket
+  
+  serverless-s3-cleaner:
+    buckets:
+      - ${cf:${self:custom.baseName}.ServerlessDeploymentBucketName, ''}
+  
+  scriptable:
+    hooks:
+      package:createDeploymentArtifacts:
+        - yarn run bundle
+        - yarn run zip:canary ${self:custom.buckets.version}
+        - yarn run zip:cleanup
+      after:aws:deploy:deploy:createStack:
+        - yarn run upload --bucket ${self:custom.buckets.cleanup} --region ${self:provider.region}
+        - yarn run upload --bucket ${self:custom.buckets.canary} --region ${self:provider.region} --version ${self:custom.buckets.version}
+      after:remove:remove:
+        - yarn run remove:bucket ${self:custom.buckets.canary}
+        - yarn run remove:bucket ${self:custom.buckets.cleanup}
+
+
+provider:
+  name: aws
+  region: ${opt:region, 'eu-west-1'}
+  stage: ${opt:stage, 'dev'}
+  stackName: ${self:custom.baseName}
+  deploymentBucket:
+    blockPublicAccess: true
+
+
+resources:
+  - ${file(infra/synthetic-canary.yml)}
+  - ${file(infra/cleanup-stack.yml)}

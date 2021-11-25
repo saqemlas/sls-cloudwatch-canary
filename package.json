@@ -1,0 +1,28 @@
+{
+  "name": "@aws-template/cloudwatch-canary",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "scripts": {
+    "clean": "bash clean-dependencies.sh",
+    "postinstall": "cd infra/cleanup-function && pip3 install cfnresponse -t .",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node12 --external:SyntheticsLogger --external:Synthetics --outfile=canary/nodejs/node_modules/index.js",
+    "zip:canary": "f() { cd canary && zip -r canary-$1.zip .; }; f",
+    "zip:cleanup": "cd infra/cleanup-function && zip -r ../cleanup-function.zip .",
+    "upload": "bash deploy-s3.sh",
+    "deploy": "serverless deploy",
+    "remove": "serverless remove",
+    "remove:bucket": "f() { AWS_PAGER='' && aws s3 rb --force s3://$1; }; f"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.84",
+    "@types/node": "12.12.70",
+    "esbuild": "0.13.15",
+    "inquirer": "8.2.0",
+    "rimraf": "3.0.2",
+    "serverless": "2.66.2",
+    "serverless-s3-cleaner": "1.0.1",
+    "serverless-scriptable-plugin": "1.2.2",
+    "uuid": "8.3.2"
+  }
+}

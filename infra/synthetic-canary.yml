@@ -1,0 +1,103 @@
+Resources:
+
+  Canary:
+    DependsOn: CanaryRole
+    Type: AWS::Synthetics::Canary
+    Properties:
+      Name: ${self:custom.baseName}
+      ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/${self:custom.baseName}-role
+      Code: {
+        Handler: index.handler,
+        S3Bucket: '${self:custom.buckets.canary}', 
+        S3Key: 'canary-${self:custom.buckets.version}.zip'
+      }
+      ArtifactS3Location: 's3://${self:custom.buckets.canary}'
+      RuntimeVersion: syn-nodejs-puppeteer-3.3
+      # ^see - https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Library_nodejs_puppeteer.html
+      Schedule: {
+        Expression: 'rate(1 minute)', 
+        DurationInSeconds: 0 # run indefinitely
+      }
+      RunConfig: {
+        ActiveTracing: true,
+        TimeoutInSeconds: 60,
+        MemoryInMB: 960,
+        EnvironmentVariables: {
+          ENVIRONMENT: '${self:provider.stage}',
+          REGION: '${self:provider.region}',
+          URL: 'http://www.google.co.uk/'
+        }
+      }
+      FailureRetentionPeriod: 30
+      SuccessRetentionPeriod: 30
+      StartCanaryAfterCreation: false
+
+
+  CanaryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ${self:custom.baseName}-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchSyntheticsPolicy-${self:custom.baseName}-${self:provider.region}
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTelemetryRecords
+                  - xray:PutTraceSegments
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetBucketLocation
+                Resource: 
+                  - arn:aws:s3:::${self:custom.buckets.canary}
+                  - arn:aws:s3:::${self:custom.buckets.canary}/*
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 
+                  - !Sub arn:aws:logs:${self:provider.region}:${AWS::AccountId}:log-group:/aws/lambda/cwsyn-${self:custom.baseName}-*
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: CloudWatchSynthetics
+
+  CanaryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ${self:custom.baseName}-failed-alarm
+      # AlarmActions: SNSTopicArn
+      Namespace: CloudWatchSynthetics
+      MetricName: Failed
+      Dimensions: 
+        - Name: CanaryName
+          Value: !Ref Canary
+      TreatMissingData: notBreaching
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 3
+      Period: 300
+      Statistic: Sum
+      Unit: Count
+      EvaluationPeriods: 3

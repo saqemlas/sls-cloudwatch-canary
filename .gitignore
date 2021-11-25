@@ -1,0 +1,8 @@
+.DS_Store
+
+node_modules
+infra/cleanup-function/**
+!infra/cleanup-function/index.py
+
+canary
+*.zip
