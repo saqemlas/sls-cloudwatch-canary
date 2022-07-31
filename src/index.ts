@@ -3,8 +3,6 @@ import synthetics from 'Synthetics';
 
 const url: string = process.env.URL || '';
 
-const timeout = (ms: number) =>  new Promise((res) => setTimeout(() => {}, ms));
-
 export async function handler (): Promise<void> {
     await synthetics.getConfiguration().setConfig({
         includeRequestHeaders: false, 
@@ -15,6 +13,8 @@ export async function handler (): Promise<void> {
     });
 
     let page = await synthetics.getPage();
+
+    logger.info(`Navigating to ${url}`);
 
     await synthetics.executeStep('StepOne', async function (timeoutInMillis = 30000) {
         await page.goto(url, {waitUntil: ['domcontentloaded', 'networkidle0'], timeout: timeoutInMillis});
