@@ -41,12 +41,12 @@ export AWS_PROFILE=<profile_name>
 ### Deploy:
 
 ```bash
-serverless deploy
+yarn run deploy
 ```
 
 ### Remove:
 
 ```bash
-serverless remove
+yarn run remove
 ```
 

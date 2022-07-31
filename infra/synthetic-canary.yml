@@ -12,8 +12,7 @@ Resources:
         S3Key: 'canary-${self:custom.buckets.version}.zip'
       }
       ArtifactS3Location: 's3://${self:custom.buckets.canary}'
-      RuntimeVersion: syn-nodejs-puppeteer-3.3
-      # ^see - https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Library_nodejs_puppeteer.html
+      RuntimeVersion: syn-nodejs-puppeteer-3.6 # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Library_nodejs_puppeteer.html
       Schedule: {
         Expression: 'rate(1 minute)', 
         DurationInSeconds: 0 # run indefinitely
@@ -31,7 +30,8 @@ Resources:
       FailureRetentionPeriod: 30
       SuccessRetentionPeriod: 30
       StartCanaryAfterCreation: false
-
+      Tags:
+        NAME: ${self:custom.baseName}
 
   CanaryRole:
     Type: AWS::IAM::Role

@@ -1,25 +1,18 @@
 service: canary
 
-variablesResolutionMode: 20210326
-
 plugins:
   - serverless-s3-cleaner
   - serverless-scriptable-plugin
 
-projectDir: ..
-
 package:
   individually: true
-  patterns:
-    - '!node_modules/**'
-    - '!.serverless/**'
 
 custom:
   project: template
   baseName: ${self:custom.project}-${self:service}-${self:provider.stage}
 
   buckets: 
-    version: ${file(./timestamp.js)} # force lambda to identify updated code
+    version: ${file(./scripts/timestamp.js)} # force lambda to identify updated code
     canary: ${self:custom.baseName}-bucket
     cleanup: ${self:custom.baseName}-cleanup-bucket
   

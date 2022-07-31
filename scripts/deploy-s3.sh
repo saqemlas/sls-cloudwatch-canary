@@ -49,12 +49,12 @@ fi
 
 # Check if VERSION is set
 if [[ -z "${VERSION-}" ]]; then
-  echo "VERSION not set! Copying cleanup zip to $BUCKET_NAME..."
+  echo "VERSION not set! Copying cleanup function zip to $BUCKET_NAME..."
   cd infra
   # Copy zip to S3 bucket
   aws s3 cp cleanup-function.zip "s3://$BUCKET_NAME"
 else
-  echo "Version $VERSION set! Copying canary zip to $BUCKET_NAME..."
+  echo "Version $VERSION set! Copying canary function zip to $BUCKET_NAME..."
   cd canary
   # Copy zip to S3 bucket
   aws s3 cp canary-$VERSION.zip "s3://$BUCKET_NAME"
