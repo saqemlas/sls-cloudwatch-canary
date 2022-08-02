@@ -2,8 +2,8 @@
 
 node_modules
 .serverless
-infra/cleanup-function/**
-!infra/cleanup-function/index.py
+sls/cleanup-function/**
+!sls/cleanup-function/index.py
 
 canary
 *.zip
